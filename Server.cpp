@@ -1,17 +1,21 @@
 #include <boost/asio.hpp>
 #include <iostream>
+#include <map>
 #include "Header.h"
 
 using namespace boost::asio;
 using namespace std;
 typedef uint8_t byte;
 
+struct session;
+map<string, session*> session_id;
 void broadcast(vector<byte>& buffer);
 
 struct session {
 	vector<byte> recBuffer;
 	int recTotal, recBytes;
 	MessageType recType;
+	string username;
 
 	vector<byte> sendBuffer;
 
@@ -55,18 +59,54 @@ struct session {
 				receiveBody();
 			}
 			else {
-				string msg = string(reinterpret_cast<char*>(recBuffer.data()));
-				cout << "received: " << msg << endl;
-				
-				sendBuffer.clear();
-				size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
-				sendBuffer.resize(sendSize);
-				MessageHeader header = MessageHeader{ MessageType::CHAT, msg.length()+1 };
 
-				memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
-				memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length()+1);
-				broadcast(sendBuffer);
-				
+				if (recType == MessageType::CHAT) 
+				{
+					string msg = string(reinterpret_cast<char*>(recBuffer.data()));;
+					cout << "Received " << msg << endl;
+					sendBuffer.clear();
+					size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
+					sendBuffer.resize(sendSize);
+					MessageHeader header = MessageHeader{ MessageType::CHAT, msg.length() + 1 };
+
+					memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
+					memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
+					broadcast(sendBuffer);
+				}
+				else if (recType == MessageType::CONNECT)
+				{
+					string desiredUname = string(reinterpret_cast<char*>(recBuffer.data()));
+					while (session_id.find(desiredUname) != session_id.end()) {
+						char digit = desiredUname[desiredUname.length()-1];
+						if (digit >= '0' && digit <= '8')
+						{
+							desiredUname[desiredUname.length() - 1] = (char)(digit + 1);
+						}
+						else if (digit == '9')
+						{
+							desiredUname[desiredUname.length() - 1] = '0';
+							desiredUname += "0";
+						}
+						else
+						{
+							desiredUname += "0";
+						}
+					}
+					username = desiredUname;
+					session_id[username] = this;
+					cout << username << " has connected." << endl;
+
+					string msg = username;
+
+					sendBuffer.clear();
+					size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
+					sendBuffer.resize(sendSize);
+					MessageHeader header = MessageHeader{ MessageType::CONFIRM, msg.length() + 1 };
+
+					memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
+					memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
+					send();
+				}
 
 				recBuffer.clear();
 				receiveHeader();
@@ -80,7 +120,6 @@ struct session {
 
 	void send() {
 		socket.async_send(buffer(sendBuffer.data(), sendBuffer.size()), [&](boost::system::error_code ec, size_t size) {
-			cout << "Sent somthing" << endl;
 		});
 	}
 };
@@ -108,7 +147,6 @@ int main() {
 		ac.async_accept(socket, [&](boost::system::error_code ec) {
 			sessions.push_back(std::make_shared<session>(std::move(socket)));
 			sessions.back()->receiveHeader();
-			cout << "someone connected!" << endl;
 			accept();
 		});
 	};
