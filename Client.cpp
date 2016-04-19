@@ -59,14 +59,15 @@ private:
 			[&](boost::system::error_code ec, tcp::resolver::iterator) {
 			if (!ec) {
 				connected = true;
-				std::vector<uint8_t>attemptuser(username.begin(), username.end());
-				write(CommandType::CONNECT, &attemptuser[0], attemptuser.size());
+				cout << "Connected!";
+				//std::vector<uint8_t>attemptuser(username.begin(), username.end());
+				//write(CommandType::CONNECT, &attemptuser[0], attemptuser.size());
 			}
 			else { socket.close(); }
 
 		});
 	}
-
+	/*
 	void receive() {
 		socket.async_receive(boost::asio::buffer(buffer), [&](auto ec, auto length) {
 			if (!ec) {
@@ -85,6 +86,9 @@ private:
 		});
 		receive();
 	}
+	
+	*/
+	
 
 };
 
@@ -116,6 +120,7 @@ int main(int argc, char*argv[]) {
 			if (c.isConnected()) {
 				std::vector<uint8_t> data(message.begin(), message.end());
 				c.write(CommandType::MESSAGE, &data[0], data.size());
+				cout << "Sending \n";
 			}
 			else {
 				cout << "Not Connected, please wait \n";
