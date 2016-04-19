@@ -31,15 +31,15 @@ private:
 	std::function<void(boost::system::error_code, size_t)> handler = [this](boost::system::error_code ec, size_t length) {
 		if (!ec) {
 			cout << "Command Received\n";
+			/*
 			auto *com = reinterpret_cast<const Command*>(recv_buffer.data());
-			string user;
 			switch (com->type) {
 			case CommandType::MESSAGE:
-				char message[1024];
+				//char message[1024];
 				cout << "Message" << endl;
-				memcpy(message, com->data, com->size);
-				message[com->size] = '\0';
-				broadcast(*com);
+				//memcpy(message, com->data, com->size);
+				//message[com->size] = '\0';
+				//broadcast(*com);
 				break;
 			case CommandType::DL:
 				break;
@@ -48,6 +48,10 @@ private:
 			case CommandType::UPLOAD:
 				break;
 			}
+
+			*/
+			
+
 		}
 		else {
 			socket.close();
@@ -57,7 +61,6 @@ private:
 
 
 	void receive() {
-		std::vector<uint8_t> data_gathered;
 		socket.async_receive(boost::asio::buffer(recv_buffer), handler);
 	}
 public:
