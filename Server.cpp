@@ -1,6 +1,7 @@
 #include <boost/asio.hpp>
 #include <iostream>
 #include <map>
+#include <utility>
 #include "Header.h"
 
 using namespace boost::asio;
@@ -10,6 +11,7 @@ typedef uint8_t byte;
 struct session;
 vector<session*> sessions;
 map<string, session*> session_id;
+map<string, pair<FileInfo, vector<byte>>> files;
 void broadcast(vector<byte>& buffer);
 
 struct session {
@@ -128,6 +130,25 @@ struct session {
 					memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
 					memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
 					broadcast(sendBuffer);
+				}
+				else if (recType == MessageType::FILE_QUERY) {
+					string msg = "";
+					if (files.size() == 0)
+						msg = "There are no files uploaded in the server.";
+					else {
+						msg = "Files in the server are:";
+						for (auto iterator = files.begin(); iterator != files.end(); iterator++)
+							msg += " " + iterator->first;
+					}
+
+					sendBuffer.clear();
+					size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
+					sendBuffer.resize(sendSize);
+					MessageHeader header = MessageHeader{ MessageType::CHAT, msg.length() + 1 };
+
+					memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
+					memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
+					send();
 				}
 
 				recBuffer.clear();

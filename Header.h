@@ -13,3 +13,8 @@ struct MessageHeader {
 	MessageType type;
 	size_t size;
 };
+
+struct FileInfo {
+	size_t fileSize;
+	size_t filenameLength;
+};

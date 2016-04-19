@@ -144,6 +144,17 @@ struct client {
 			socket.close();
 			exit(0);
 		}
+		else if (command == "/ls") {
+			msg = "FILE";
+			size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
+			sendBuffer.resize(sendSize);
+			MessageHeader header = MessageHeader{ MessageType::FILE_QUERY, msg.length() + 1 };
+
+			memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
+			memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
+			send();
+			cout << " > ";
+		}
 		else {
 			cout << endl;
 			cout << command << " is not a valid command." << endl;
