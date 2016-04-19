@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <string>
 #include <thread>
+#include <sstream>
 #include "Header.h"
 
 using namespace boost::asio;
@@ -45,15 +46,7 @@ struct client {
 		string msg;
 		cout << " > ";
 		while (getline(cin, msg)) {
-			msg = username + ": " + msg;
-			size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
-			sendBuffer.resize(sendSize);
-			MessageHeader header = MessageHeader{ MessageType::CHAT, msg.length() + 1 };
-
-			memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
-			memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
-			send();
-			cout << " > ";
+			execute(msg);
 		}
 	}
 
@@ -115,6 +108,36 @@ struct client {
 		socket.async_send(buffer(sendBuffer.data(), sendBuffer.size()), [&](boost::system::error_code ec, size_t size) {
 			sendBuffer.clear();
 		});
+	}
+
+	void execute(string msg) {
+		MessageType execType = MessageType::CHAT;
+		if (msg[0] != '/') {
+			execType = MessageType::CHAT;
+
+			msg = username + ": " + msg;
+			size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
+			sendBuffer.resize(sendSize);
+			MessageHeader header = MessageHeader{ MessageType::CHAT, msg.length() + 1 };
+
+			memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
+			memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
+			send();
+			cout << " > ";
+			return;
+		}
+
+		stringstream ss;
+		ss << msg;
+		string command; ss >> command;
+		if (command == "/exit") {
+			cout << "EXIT PROOF" << endl;
+		}
+		else {
+			cout << endl;
+			cout << command << " is not a valid command." << endl;
+			cout << " > ";
+		}
 	}
 };
 
