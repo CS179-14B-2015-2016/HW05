@@ -22,6 +22,7 @@ struct client {
 	vector<byte> sendBuffer;
 
 	client(io_service& service, string username): socket(service), username(username)  {}
+	~client() {}
 
 	void connect(ip::tcp::resolver& resolver, string host, string port) {
 		auto endpoint_iterator = resolver.resolve({host, port});
@@ -131,7 +132,17 @@ struct client {
 		ss << msg;
 		string command; ss >> command;
 		if (command == "/exit") {
-			cout << "EXIT PROOF" << endl;
+			cout << "Disconnecting..." << endl;
+			msg = username;
+			size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
+			sendBuffer.resize(sendSize);
+			MessageHeader header = MessageHeader{ MessageType::DISCONNECT, msg.length() + 1 };
+
+			memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
+			memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
+			send();
+			socket.close();
+			exit(0);
 		}
 		else {
 			cout << endl;
@@ -167,6 +178,5 @@ int main() {
 		cout << "Exception: " << ex.what() << endl;
 	}
 
-	std		::system("pause");
 	return 0;
 }

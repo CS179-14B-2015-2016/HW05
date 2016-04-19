@@ -8,6 +8,7 @@ using namespace std;
 typedef uint8_t byte;
 
 struct session;
+vector<session*> sessions;
 map<string, session*> session_id;
 void broadcast(vector<byte>& buffer);
 
@@ -95,7 +96,7 @@ struct session {
 					username = desiredUname;
 					session_id[username] = this;
 					cout << username << " has connected." << endl;
-
+					cout << "Active users: " << sessions.size() << endl;
 					string msg = username;
 
 					sendBuffer.clear();
@@ -106,6 +107,27 @@ struct session {
 					memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
 					memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
 					send();
+				}
+				else if (recType == MessageType::DISCONNECT) {
+					string msg = string(reinterpret_cast<char*>(recBuffer.data()));
+					session* toRemove = session_id[msg];
+
+					session_id.erase( msg );
+					sessions.erase(std::remove(sessions.begin(), sessions.end(), toRemove));
+
+					msg += " has disconnected.";
+
+					cout << msg << endl;
+					cout << "Active users: " << sessions.size() << endl;
+
+					sendBuffer.clear();
+					size_t sendSize = sizeof(MessageHeader) + msg.length() + 1;
+					sendBuffer.resize(sendSize);
+					MessageHeader header = MessageHeader{ MessageType::CONFIRM, msg.length() + 1 };
+
+					memcpy(sendBuffer.data(), &header, sizeof(MessageHeader));
+					memcpy(sendBuffer.data() + sizeof(MessageHeader), msg.data(), msg.length() + 1);
+					broadcast(sendBuffer);
 				}
 
 				recBuffer.clear();
@@ -123,8 +145,6 @@ struct session {
 		});
 	}
 };
-
-vector<shared_ptr<session>> sessions;
 
 void broadcast(vector<byte>& buffer) {
 	for (auto session : sessions) {
@@ -145,7 +165,7 @@ int main() {
 	function<void (void)> accept = [&]() {
 		cout << "waiting for connections..." << endl;
 		ac.async_accept(socket, [&](boost::system::error_code ec) {
-			sessions.push_back(std::make_shared<session>(std::move(socket)));
+			sessions.push_back(new session(std::move(socket)));
 			sessions.back()->receiveHeader();
 			accept();
 		});
